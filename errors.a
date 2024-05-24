@@ -1,0 +1,58 @@
+;
+; Joystick driver for MicroDigital Mico
+; Copyright (C) 2002 Chris Bazley
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 2 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program; if not, write to the Free Software
+; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;
+
+; Error blocks are assembled separately by ASM because the _kernel_oserror C structure wastes tons of memory
+AREA C$$data, DATA
+
+; My error block - &81A700
+; (SFX_Handler module uses error numbers up to &81A700-&81A710, ScreenGrabber module uses &81A720 and &81A721, fake Joystick module uses &81A730-&81A732)
+
+; Known messages/error numbers for Acorn's Joystick module
+; NoHWare: "Joystick hardware not present" (error &43f40)
+; BadJoy: "Joystick number out of range" (error &43f41)
+
+EXPORT error_command_syntax
+error_command_syntax:
+  DCD &dc ; same as system error number
+  DCSZ "Syntax error in Joystick command"
+  ALIGN
+
+EXPORT gameport_not_found
+gameport_not_found:
+  DCD &43f40 ; same number as Acorn's NoHWare message
+  DCSZ "Plug\'n\'Play not initialised correctly, or no gameport fitted"
+  ALIGN
+
+EXPORT bad_joy_num
+bad_joy_num:
+  DCD &43f41 ; same number as Acorn's BadJoy message
+  DCSZ "Joystick number out of range"
+  ALIGN
+
+EXPORT bad_reason
+bad_reason:
+  DCD &81A730 ; same number as fake Joystick error (don't know Acorn's)
+  DCSZ "Joystick_Read reason code not supported"
+  ALIGN
+
+EXPORT error_calib
+error_calib:
+  DCD &81A732 ; same number as fake Joystick error (don't know Acorn's)
+  DCSZ "Joystick calibration incomplete"
+  ALIGN

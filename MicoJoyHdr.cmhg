@@ -1,0 +1,63 @@
+;
+; Joystick driver for MicroDigital Mico
+; Copyright (C) 2002 Chris Bazley
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 2 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program; if not, write to the Free Software
+; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+initialisation-code: MicoJoy_initialise
+finalisation-code: MicoJoy_finalise
+
+title-string: Joystick
+help-string: Joystick 2.02 for Mico © Chris Bazley
+
+swi-chunk-base-number: 0x43f40
+swi-handler-code: MicoJoy_swihandler
+swi-decoding-table: Joystick,
+                    Read,
+                    CalibrateTopRight,
+                    CalibrateBottomLeft
+                    
+generic-veneers: pollstick_veneer/pollstick_handler,
+                 stoppoll_veneer/stoppoll_handler,
+                 doread_veneer/doread_handler
+
+
+command-keyword-table: MicoJoy_cmdhandler
+
+JoystickConfig(min-args:0,
+      max-args:9,
+      add-syntax:,
+      help-text: "*JoystickConfig configures the analogue joystick driver, or with no parameters displays the current settings. Time values are in units of 1/2 microsecond, except for poll frequency which is in centiseconds.\n",
+      invalid-syntax: "Syntax: *JoystickConfig [-smooth|-nosmooth] [-ctrzone|-noctrzone] [-endzone|-noendzone] [-tolerance <interval>] [-timeout <delay>] [-poll <frequency>]"
+     ),
+JoystickCalib(min-args:2,
+      max-args:14,
+      add-syntax:,
+      help-text: "*JoystickCalib allows you to manually set one or more of the calibration values for a joystick axis. Time values are in units of 1/2 microsecond.\n",
+      invalid-syntax: "Syntax: *JoystickCalib <stick number> X|Y [-min <time>] [-ctr <time>] [-max <time>] [-ctrzone <interval>] [-endzone <interval>] [-smooth <interval>]"
+     ),
+JoystickReInit(min-args:0,
+      max-args:1,
+      add-syntax:,
+      help-text: "*JoystickReInit auto-detects a joystick's characteristics and calibrates it using the current stick position as centre. If no stick number is specified then all joysticks are re-initialised.\n",
+      invalid-syntax: "Syntax: *JoystickReInit [<stick number>]"
+     ),
+JoystickInfo(min-args:0,
+      max-args:0,
+      add-syntax:,
+      help-text: "*JoystickInfo displays the current calibration values for all joysticks.\n",
+      invalid-syntax: "Syntax: *JoystickInfo"
+     )
+
