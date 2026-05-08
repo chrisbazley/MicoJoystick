@@ -29,7 +29,9 @@
 /* RISC OS headers */
 #include "kernel.h"
 #include "swis.h"
+#ifdef DEBUG
 #include "syslog.h"
+#endif
 
 /* CMHG header */
 #include "MicoJoyHdr.h"
@@ -47,7 +49,7 @@ static const char *log_name = "Joystick";
 #endif
 
 /*
-   Default tolerance (in µs/2) of delays in registering axis bit change
+   Default tolerance (in Âµs/2) of delays in registering axis bit change
     - if too small then slow machines won't read stick at all
     - if too long then inaccurate values (caused by interrupts)
       may go undetected
@@ -55,7 +57,7 @@ static const char *log_name = "Joystick";
 #define MAX_GRANULARITY 30 /* default */
 
 /*
-   Default maximum time (in µs/2) to wait for axis bits
+   Default maximum time (in Âµs/2) to wait for axis bits
 */
 #define MAX_AXIS_WAIT_TIME 2000 /* default */
 
@@ -828,7 +830,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
 
 _kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw)
 {
-  /* Called every 10 cs (100,000µs) */
+  /* Called every 10 cs (100,000Âµs) */
   UNUSED(r);
   
 #ifdef DEBUG
@@ -1062,7 +1064,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
   *game_port_address = 0;
 
   /*
-    IOC Timer 0 is used for timing - ticks at 2MHz, 0.5µs per tick
+    IOC Timer 0 is used for timing - ticks at 2MHz, 0.5Âµs per tick
     Counts down from 19999 to 0
   */
   {
@@ -1078,7 +1080,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
 
   /*
      Time how long the axis bits take to drop back to 0
-     if they take 1000µs or longer then we give up (not connected?)   */
+     if they take 1000Âµs or longer then we give up (not connected?)   */
   {
     int prev_time = start_time, wait = 0;
     unsigned int sticks_lost = 0;
@@ -1567,7 +1569,7 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
             x_jitdist[stick_num] = (unsigned int)max;
           }
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "x deadzone for stick %d : ±%u (min = %u, max = %u)", stick_num, x_jitdist[stick_num], x_jit_min[stick_num], x_jit_max[stick_num]);
+          xsyslogf(log_name, 50, "x deadzone for stick %d : Â±%u (min = %u, max = %u)", stick_num, x_jitdist[stick_num], x_jit_min[stick_num], x_jit_max[stick_num]);
 #endif
   
           min = y_array[stick_num] - y_jit_min[stick_num];
@@ -1580,7 +1582,7 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
             y_jitdist[stick_num] = (unsigned int)max;
           }
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "y deadzone for stick %d : ±%u (min = %u, max = %u)", stick_num, y_jitdist[stick_num], y_jit_min[stick_num], y_jit_max[stick_num]);
+          xsyslogf(log_name, 50, "y deadzone for stick %d : Â±%u (min = %u, max = %u)", stick_num, y_jitdist[stick_num], y_jit_min[stick_num], y_jit_max[stick_num]);
 #endif
         }
       }
