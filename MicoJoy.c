@@ -1082,7 +1082,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
      Time how long the axis bits take to drop back to 0
      if they take 1000µs or longer then we give up (not connected?)   */
   {
-    int prev_time = start_time, wait = 0;
+    unsigned int prev_time = start_time, wait = 0;
     unsigned int sticks_lost = 0;
 
     while (mask != 0 && wait < max_wait) {
