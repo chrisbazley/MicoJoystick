@@ -25,6 +25,8 @@
 #include <limits.h>
 #include <assert.h>
 #include <ctype.h>
+#include <stddef.h>
+#include <inttypes.h>
 
 /* RISC OS headers */
 #include "kernel.h"
@@ -289,9 +291,11 @@ _kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void 
   if(_kernel_getenv("PnPManager$GamesPort_Address", addr_buffer, sizeof(addr_buffer)) != NULL)
     return &gameport_not_found;
   {
-    int matched= sscanf(addr_buffer, "&%x", &game_port_address);
+    uintptr_t addr = 0;
+    int matched = sscanf(addr_buffer, "&%" SCNxPTR, &addr);
     if(matched == EOF || matched < 1)
       return &gameport_not_found;
+    game_port_address = (void *)addr;
   }
   reinit_joysticks(STICK_0|STICK_1);
   
