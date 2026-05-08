@@ -1492,7 +1492,6 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
               unsigned int diff;
               absdiff(diff, last_x[stick_num], x_axis[stick_num]);
               if(diff <= x_smooth[stick_num]*2) {
-                unsigned int diff;
                 absdiff(diff, last_y[stick_num], y_axis[stick_num]);
                 if(diff <= y_smooth[stick_num]*2) {
                   /* within range of previous position */
