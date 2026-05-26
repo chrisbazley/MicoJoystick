@@ -1602,10 +1602,30 @@ static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_a
 
 static int32_t eval_expr(char *buffer)
 {
-  if(buffer[0] == 0)
-    return buffer[1] | ((int32_t)buffer[2]<<8) | ((int32_t)buffer[3]<<16) | ((int32_t)buffer[4]<<24);
-  else
+  if(buffer[0] == 0) {
+    /* Assemble a 32 bit integer from 4 bytes, assuming
+     little-endian order (least significant byte first) */
+    uint32_t const unum = buffer[0] |
+                          ((uint32_t)buffer[1] << CHAR_BIT) |
+                          ((uint32_t)buffer[2] << (CHAR_BIT * 2)) |
+                          ((uint32_t)buffer[3] << (CHAR_BIT * 3));
+    int32_t snum = 0;
+
+    if(unum <= INT32_MAX) {
+      snum = (int32_t)unum;
+    } else {
+      /* Beware that -INT32_MIN may be unrepresentable as int32_t. */
+      uint32_t const neg = 0u - unum;
+      if(neg <= INT32_MAX) {
+        snum = -(int32_t)neg;
+      } else {
+        snum = INT32_MIN;
+      }
+    }
+    return snum;
+  } else {
     return 0;
+  }
 }
 
 /* ----------------------------------------------------------------------- */
