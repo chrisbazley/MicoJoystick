@@ -362,7 +362,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
             if(stick_num < NUM_STICKS) {
               /* First two joysticks are supported */
               { /* Use cached stick positions */
-                intptr_t x, y;
+                int32_t x, y;
 
                 /* calc joystick 8-bit position */
 #ifdef DEBUG
@@ -448,7 +448,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
               /* First two joysticks are supported */
 
               { /* Use cached stick positions */
-                intptr_t x, y;
+                int32_t x, y;
                 /* calc joystick 16-bit position */
 #ifdef DEBUG
                 printf("x_axis[%d] = %" PRId32 " (%" PRId32 "-%" PRId32 ") y_axis[%d] = %" PRId32 " (%" PRId32 "-%" PRId32 ")\n", stick_num, x_axis[stick_num], x_min[stick_num], x_max[stick_num], stick_num, y_axis[stick_num], y_min[stick_num], y_max[stick_num]);
@@ -1021,22 +1021,22 @@ static void recalc_coefficients(unsigned int sticks)
           x_end_dz = 0;
           y_end_dz = 0;
         }
-        safedivide(x_low_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), x_ctr_low[stick_num] - (x_min[stick_num] + x_end_dz));
+        safedivide(x_low_scaler[stick_num], ((int32_t)32768<<SCALER_FRAC_SHIFT), x_ctr_low[stick_num] - (x_min[stick_num] + x_end_dz));
 #ifdef DEBUG
         xsyslogf(log_name, 50, "x_low_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, x_low_scaler[stick_num], x_low_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
 
-        safedivide(x_high_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), (x_max[stick_num] - x_end_dz) - x_ctr_high[stick_num]);
+        safedivide(x_high_scaler[stick_num], ((int32_t)32768<<SCALER_FRAC_SHIFT), (x_max[stick_num] - x_end_dz) - x_ctr_high[stick_num]);
 #ifdef DEBUG
         xsyslogf(log_name, 50, "x_high_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, x_high_scaler[stick_num], x_high_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
 
-        safedivide(y_low_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), y_ctr_low[stick_num] - (y_min[stick_num] + y_end_dz));
+        safedivide(y_low_scaler[stick_num], ((int32_t)32768<<SCALER_FRAC_SHIFT), y_ctr_low[stick_num] - (y_min[stick_num] + y_end_dz));
 #ifdef DEBUG
         xsyslogf(log_name, 50, "y_low_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, y_low_scaler[stick_num], y_low_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
 
-        safedivide(y_high_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), (y_max[stick_num] - y_end_dz) - y_ctr_high[stick_num]);
+        safedivide(y_high_scaler[stick_num], ((int32_t)32768<<SCALER_FRAC_SHIFT), (y_max[stick_num] - y_end_dz) - y_ctr_high[stick_num]);
 #ifdef DEBUG
         xsyslogf(log_name, 50, "y_high_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, y_high_scaler[stick_num], y_high_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
