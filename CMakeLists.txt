@@ -19,12 +19,15 @@ endif()
 
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" SYSTEM_NAME_UPPER)
 
+file(GLOB HEADER_FILES CONFIGURE_DEPENDS "*.h")
+file(GLOB SOURCE_FILES CONFIGURE_DEPENDS "*.c")
+
 if(SYSTEM_NAME_UPPER STREQUAL "RISCOS")
   # RISC OS: The only platform where it links and runs
-  add_executable(MicoJoystick MicoJoy.c)
+  add_executable(MicoJoystick ${SOURCE_FILES} ${HEADER_FILES})
 else()
   # Other platforms: Compile only (no linking) to catch errors
-  add_library(MicoJoystick MicoJoy.c)
+  add_library(MicoJoystick ${SOURCE_FILES} ${HEADER_FILES})
 endif()
 
 target_link_libraries(MicoJoystick PRIVATE
