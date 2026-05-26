@@ -94,7 +94,7 @@ static const char *log_name = "Joystick";
 
 /* Guard against divide by zero */
 #define safedivide(quotient, dividend, divisor) { \
-  int div = divisor; \
+  int32_t div = divisor; \
   if(div != 0) \
     quotient = (dividend) / (divisor); \
   else \
@@ -114,7 +114,7 @@ static const char *log_name = "Joystick";
 #define PC_JOY_B_B1 (1u << 6)
 #define PC_JOY_B_B2 (1u << 7) /* status packed into single byte */
 
-static volatile unsigned char *game_port_address; /* get address from PnP manager */
+static volatile uint8_t *game_port_address; /* get address from PnP manager */
 static unsigned int axes_mask = 0; /* axes bits to read - set by reinit_joysticks() */
 
 /*
@@ -125,25 +125,25 @@ static unsigned int axes_mask = 0; /* axes bits to read - set by reinit_joystick
 #define IOC_ADDRESS   0x03200000
 
 typedef struct _IOC_Timer { /* subset of IOC registers */
-  unsigned char low[4]; /* count low (read) / latch low (write) */
-  unsigned char high[4]; /* count high (read) / latch high (write) */
-  unsigned char go[4]; /* go command (write) */
-  unsigned char latch[4]; /* latch command (write)*/
+  uint8_t low[4]; /* count low (read) / latch low (write) */
+  uint8_t high[4]; /* count high (read) / latch high (write) */
+  uint8_t go[4]; /* go command (write) */
+  uint8_t latch[4]; /* latch command (write)*/
 } IOC_Timer;
 
 typedef struct _IOC_Int { /* subset of IOC registers */
-  unsigned char status[4]; /* (read) */
-  unsigned char request[4]; /* (read) / clear interrupt bits (IRQ A only) */
-  unsigned char mask[4]; /* (read/write) */
-  unsigned char uk[4];
+  uint8_t status[4]; /* (read) */
+  uint8_t request[4]; /* (read) / clear interrupt bits (IRQ A only) */
+  uint8_t mask[4]; /* (read/write) */
+  uint8_t uk[4];
 } IOC_Int;
 
 typedef struct _IOC { /* IOC registers (All 8 bits wide) */
 
-  volatile unsigned char control[4]; /* (read/write) */
-  volatile unsigned char keyboard[4]; /* receive (read) / send (write) */
-  volatile unsigned char uk1[4];
-  volatile unsigned char uk2[4];
+  volatile uint8_t control[4]; /* (read/write) */
+  volatile uint8_t keyboard[4]; /* receive (read) / send (write) */
+  volatile uint8_t uk1[4];
+  volatile uint8_t uk2[4];
 
   /* IRQ / FIQ regs... */
   volatile IOC_Int  IRQ_A;
@@ -172,7 +172,7 @@ static int calib_status = CALIB_NONE;
    Current axis time values (possibly smoothed)
 */
 
-static unsigned int x_axis[NUM_STICKS], y_axis[NUM_STICKS];
+static int32_t x_axis[NUM_STICKS], y_axis[NUM_STICKS];
 
 /*
      Values established by calibration
@@ -184,10 +184,10 @@ static unsigned int x_axis[NUM_STICKS], y_axis[NUM_STICKS];
       end_deadz            ctr_deadz              end_deadz
 */
 
-static unsigned int x_min[NUM_STICKS], x_max[NUM_STICKS], y_min[NUM_STICKS], y_max[NUM_STICKS];
-static unsigned int x_ctr_deadz[NUM_STICKS], y_ctr_deadz[NUM_STICKS], x_ctr[NUM_STICKS], y_ctr[NUM_STICKS];
-static unsigned int x_end_deadz[NUM_STICKS], y_end_deadz[NUM_STICKS];
-static unsigned int x_smooth[NUM_STICKS], y_smooth[NUM_STICKS];
+static int32_t x_min[NUM_STICKS], x_max[NUM_STICKS], y_min[NUM_STICKS], y_max[NUM_STICKS];
+static int32_t x_ctr_deadz[NUM_STICKS], y_ctr_deadz[NUM_STICKS], x_ctr[NUM_STICKS], y_ctr[NUM_STICKS];
+static int32_t x_end_deadz[NUM_STICKS], y_end_deadz[NUM_STICKS];
+static int32_t x_smooth[NUM_STICKS], y_smooth[NUM_STICKS];
 
 /*
    Values used in *actual* conversion to 8-bit / 16-bit position:
@@ -195,8 +195,8 @@ static unsigned int x_smooth[NUM_STICKS], y_smooth[NUM_STICKS];
 
 #define SCALER_FRAC_SHIFT 14
 
-static unsigned int x_ctr_low[NUM_STICKS], y_ctr_low[NUM_STICKS], x_ctr_high[NUM_STICKS], y_ctr_high[NUM_STICKS];
-static unsigned int x_low_scaler[NUM_STICKS], x_high_scaler[NUM_STICKS], y_low_scaler[NUM_STICKS], y_high_scaler[NUM_STICKS];
+static int32_t x_ctr_low[NUM_STICKS], y_ctr_low[NUM_STICKS], x_ctr_high[NUM_STICKS], y_ctr_high[NUM_STICKS];
+static int32_t x_low_scaler[NUM_STICKS], x_high_scaler[NUM_STICKS], y_low_scaler[NUM_STICKS], y_high_scaler[NUM_STICKS];
 
 
 /*
@@ -212,9 +212,9 @@ static bool polling_stick = false, /* attached OS_CallEvery to pollstick_veneer?
   Global configuration (set using *JoystickConfig)
 */
 
-static unsigned int max_wait = MAX_AXIS_WAIT_TIME, tolerance = MAX_GRANULARITY;
+static int32_t max_wait = MAX_AXIS_WAIT_TIME, tolerance = MAX_GRANULARITY;
 static bool smooth = true, end_zones = true, ctr_zones = true;
-static unsigned int poll_freq = POLL_FREQUENCY-1;
+static int32_t poll_freq = POLL_FREQUENCY-1;
 
 /*
   Command syntax strings for use with OS_ReadArgs
@@ -259,12 +259,12 @@ static const char reinit_syntax[] = "/E";
 #define Y_BIAS_MAX (1u << 3) /* directional bias for get_av_stick_pos() */
 
 static unsigned int read_joystick(unsigned int mask, unsigned int *lost);
-static void recalc_coefficients(int sticks);
-static unsigned int smooth_value(unsigned int prev_value, unsigned int new_value, unsigned int stddev);
-static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigned int *y_array, unsigned int *x_jitdist, unsigned int *y_jitdist, int bias);
-static int eval_expr(char *buffer);
+static void recalc_coefficients(unsigned int sticks);
+static int32_t smooth_value(int32_t prev_value, int32_t new_value, int32_t stddev);
+static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_array, int32_t *x_jitdist, int32_t *y_jitdist, int32_t bias);
+static int32_t eval_expr(char *buffer);
 static void reinit_joysticks(unsigned int sticks);
-static void update_min_max(unsigned int *axis, unsigned int *jit_min, unsigned int *jit_max, int stick_num);
+static void update_min_max(int32_t *axis, int32_t *jit_min, int32_t *jit_max, int32_t stick_num);
 
 /* ----------------------------------------------------------------------- */
 /*                         Public functions                                */
@@ -346,15 +346,15 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
         
         /* We must assume that all values are terribly out of date */
         for(stick_num = (NUM_STICKS-1); stick_num >= 0; stick_num--) {
-          int xc = x_ctr[stick_num], yc = y_ctr[stick_num];
+          int32_t xc = x_ctr[stick_num], yc = y_ctr[stick_num];
           x_axis[stick_num] = xc;
           y_axis[stick_num] = yc;
        } /* next stick_num */
       } /* endif !polling_stick */
 
       {
-        unsigned char stick_num = r->r[0] & 0xff;
-        unsigned char reason_code = (r->r[0] & 0xff00) >> 8;
+        uint8_t stick_num = r->r[0] & 0xff;
+        uint8_t reason_code = (r->r[0] & 0xff00) >> 8;
 
         switch(reason_code) {
           case 0:
@@ -362,11 +362,11 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
             if(stick_num < NUM_STICKS) {
               /* First two joysticks are supported */
               { /* Use cached stick positions */
-                signed int x, y;
+                intptr_t x, y;
 
                 /* calc joystick 8-bit position */
 #ifdef DEBUG
-                printf("x_axis[%d] = %u (%u-%u) y_axis[%d] = %u (%u-%u)\n", stick_num, x_axis[stick_num], x_min[stick_num], x_max[stick_num], stick_num, y_axis[stick_num], y_min[stick_num], y_max[stick_num]);
+                printf("x_axis[%d] = %" PRId32 " (%" PRId32 "-%" PRId32 ") y_axis[%d] = %" PRId32 " (%" PRId32 "-%" PRId32 ")\n", stick_num, x_axis[stick_num], x_min[stick_num], x_max[stick_num], stick_num, y_axis[stick_num], y_min[stick_num], y_max[stick_num]);
 #endif
 
                 if(x_axis[stick_num] > x_ctr_low[stick_num]) {
@@ -396,7 +396,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
                   } else {
                     /* Above centre dead zone */
 #ifdef DEBUG
-                    printf("y = %d/%d\n",y_axis[stick_num] - y_ctr_high[stick_num], y_max[stick_num] - y_ctr_high[stick_num]);
+                    printf("y = %" PRId32 "/%" PRId32 "\n",y_axis[stick_num] - y_ctr_high[stick_num], y_max[stick_num] - y_ctr_high[stick_num]);
 #endif
                     y = -((y_high_scaler[stick_num] * (y_axis[stick_num] - y_ctr_high[stick_num])) >> (SCALER_FRAC_SHIFT+8));
                   }
@@ -415,8 +415,8 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
                 r->r[0] = (y & 0xff) | ((x & 0xff)<<8);
               }
               { /* Read fire buttons */
-                unsigned char joy;
-                unsigned int buttons;
+                uint8_t joy;
+                intptr_t buttons;
 
                 joy = *game_port_address; /* read joystick status bits */
                 buttons = 0;
@@ -448,10 +448,10 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
               /* First two joysticks are supported */
 
               { /* Use cached stick positions */
-                signed int x, y;
+                intptr_t x, y;
                 /* calc joystick 16-bit position */
 #ifdef DEBUG
-                printf("x_axis[%d] = %u (%u-%u) y_axis[%d] = %u (%u-%u)\n", stick_num, x_axis[stick_num], x_min[stick_num], x_max[stick_num], stick_num, y_axis[stick_num], y_min[stick_num], y_max[stick_num]);
+                printf("x_axis[%d] = %" PRId32 " (%" PRId32 "-%" PRId32 ") y_axis[%d] = %" PRId32 " (%" PRId32 "-%" PRId32 ")\n", stick_num, x_axis[stick_num], x_min[stick_num], x_max[stick_num], stick_num, y_axis[stick_num], y_min[stick_num], y_max[stick_num]);
 #endif
                 if(x_axis[stick_num] > x_ctr_low[stick_num]) {
                   if(x_axis[stick_num] < x_ctr_high[stick_num]) {
@@ -480,7 +480,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
                   } else {
                     /* Above centre dead zone */
 #ifdef DEBUG
-                    printf("y = %d/%d\n",y_axis[stick_num] - y_ctr_high[stick_num], y_max[stick_num] - y_ctr_high[stick_num]);
+                    printf("y = %" PRId32 "/%" PRId32 "\n",y_axis[stick_num] - y_ctr_high[stick_num], y_max[stick_num] - y_ctr_high[stick_num]);
 #endif
                     y = 0x7fff - ((y_high_scaler[stick_num] * (y_axis[stick_num] - y_ctr_high[stick_num])) >> SCALER_FRAC_SHIFT);
                   }
@@ -499,8 +499,8 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
                 r->r[0] = (y & 0xffff) | (x << 16);
               }
               { /* Read fire buttons */
-                unsigned char joy;
-                unsigned int buttons;
+                uint8_t joy;
+                intptr_t buttons;
 
                 joy = *game_port_address; /* read joystick status bits */
                 buttons = 0;
@@ -542,7 +542,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
   
         calib_status |= CALIB_TOP_RIGHT;
         if(calib_status == (CALIB_TOP_RIGHT|CALIB_BOTTOM_LEFT)) {
-          unsigned int x_jitdist[2], y_jitdist[2];
+          int32_t x_jitdist[2], y_jitdist[2];
           int stick_num;
 
           get_av_stick_pos(STICK_0|STICK_1, x_max, y_min, x_jitdist, y_jitdist, X_BIAS_MIN|Y_BIAS_MAX);
@@ -571,7 +571,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
 
         calib_status |= CALIB_BOTTOM_LEFT;
         if(calib_status == (CALIB_TOP_RIGHT|CALIB_BOTTOM_LEFT)) {
-          unsigned int x_jitdist[2], y_jitdist[2];
+          int32_t x_jitdist[2], y_jitdist[2];
           int stick_num;
 
           get_av_stick_pos(STICK_0|STICK_1, x_min, y_max, x_jitdist, y_jitdist, X_BIAS_MAX|Y_BIAS_MIN);
@@ -616,10 +616,10 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
         int stick_num;
         for(stick_num = 0; stick_num < NUM_STICKS; stick_num++) {
           printf(" %d X", stick_num);
-          printf(" %7u %6u %7u %8u %8u %6u\n", x_min[stick_num], x_ctr[stick_num], x_max[stick_num], x_ctr_deadz[stick_num], x_end_deadz[stick_num], x_smooth[stick_num]);
+          printf(" %7" PRId32 " %6" PRId32 " %7" PRId32 " %8" PRId32 " %8" PRId32 " %6" PRId32 "\n", x_min[stick_num], x_ctr[stick_num], x_max[stick_num], x_ctr_deadz[stick_num], x_end_deadz[stick_num], x_smooth[stick_num]);
           /* (split so that the longer formatting string can be re-used) */
           printf(" %d Y", stick_num);
-          printf(" %7u %6u %7u %8u %8u %6u\n", y_min[stick_num], y_ctr[stick_num], y_max[stick_num], y_ctr_deadz[stick_num], y_end_deadz[stick_num], y_smooth[stick_num]);
+          printf(" %7" PRId32 " %6" PRId32 " %7" PRId32 " %8" PRId32 " %8" PRId32 " %6" PRId32 "\n", y_min[stick_num], y_ctr[stick_num], y_max[stick_num], y_ctr_deadz[stick_num], y_end_deadz[stick_num], y_smooth[stick_num]);
         } /* next stick_num */
       }
       break;
@@ -683,7 +683,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
           max_wait = eval_expr(args_buf[CONFIG_SYNTAX_TIMEOUT]);
           
         if(args_buf[CONFIG_SYNTAX_POLL] != 0) {
-          int new_freq = eval_expr(args_buf[CONFIG_SYNTAX_POLL]) - 1;
+          int32_t new_freq = eval_expr(args_buf[CONFIG_SYNTAX_POLL]) - 1;
           if(new_freq <= 0)
             new_freq = 1; /* minimum delay is 2 centiseconds */
 
@@ -720,7 +720,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
           printf(" -endzone");
         else
           printf(" -noendzone");
-        printf(" -tolerance %u -timeout %u -poll %u\n", tolerance, max_wait, poll_freq+1);
+        printf(" -tolerance %" PRId32 " -timeout %" PRId32 " -poll %" PRId32 "\n", tolerance, max_wait, poll_freq+1);
       }
       break;
 
@@ -755,42 +755,42 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
           }
         }
         if(args_buf[CALIB_SYNTAX_MIN] != 0) {
-          int value = eval_expr(args_buf[CALIB_SYNTAX_MIN]);
+          int32_t value = eval_expr(args_buf[CALIB_SYNTAX_MIN]);
           if(change_x)
             x_min[joynum] = value;
           else
             y_min[joynum] = value;
         }
         if(args_buf[CALIB_SYNTAX_CTR] != 0) {
-          int value = eval_expr(args_buf[CALIB_SYNTAX_CTR]);
+          int32_t value = eval_expr(args_buf[CALIB_SYNTAX_CTR]);
           if(change_x)
             x_ctr[joynum] = value;
           else
             y_ctr[joynum] = value;
         }
         if(args_buf[CALIB_SYNTAX_MAX] != 0) {
-          int value = eval_expr(args_buf[CALIB_SYNTAX_MAX]);
+          int32_t value = eval_expr(args_buf[CALIB_SYNTAX_MAX]);
           if(change_x)
             x_max[joynum] = value;
           else
             y_max[joynum] = value;
         }
         if(args_buf[CALIB_SYNTAX_CTRZONE] != 0) {
-          int value = eval_expr(args_buf[CALIB_SYNTAX_CTRZONE]);
+          int32_t value = eval_expr(args_buf[CALIB_SYNTAX_CTRZONE]);
           if(change_x)
             x_ctr_deadz[joynum] = value;
           else
             y_ctr_deadz[joynum] = value;
         }
         if(args_buf[CALIB_SYNTAX_ENDZONE] != 0) {
-          int value = eval_expr(args_buf[CALIB_SYNTAX_ENDZONE]);
+          int32_t value = eval_expr(args_buf[CALIB_SYNTAX_ENDZONE]);
           if(change_x)
             x_end_deadz[joynum] = value;
           else
             y_end_deadz[joynum] = value;
         }
         if(args_buf[CALIB_SYNTAX_SMOOTH] != 0) {
-          int value = eval_expr(args_buf[CALIB_SYNTAX_SMOOTH]);
+          int32_t value = eval_expr(args_buf[CALIB_SYNTAX_SMOOTH]);
            if(change_x)
              x_smooth[joynum] = value;
            else
@@ -818,7 +818,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
             return e;
         }
         if(args_buf[REINIT_SYNTAX_JOYNUM] != 0) {
-          int joynum = eval_expr(args_buf[REINIT_SYNTAX_JOYNUM]);
+          int32_t joynum = eval_expr(args_buf[REINIT_SYNTAX_JOYNUM]);
           if(joynum > (NUM_STICKS-1) || joynum < 0)
             return &bad_joy_num;
 
@@ -978,7 +978,7 @@ _kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw)
 /* ----------------------------------------------------------------------- */
 /*                         Private functions                               */
 
-static void recalc_coefficients(int sticks)
+static void recalc_coefficients(unsigned int sticks)
 {
   /*
      Calculate correction coefficients from our calibration data
@@ -993,7 +993,7 @@ static void recalc_coefficients(int sticks)
   for(stick_num = (NUM_STICKS-1); stick_num >= 0; stick_num--) {
     if(sticks & (1u << stick_num)) {
       {
-        unsigned int x_ctr_dz, y_ctr_dz;
+        int32_t x_ctr_dz, y_ctr_dz;
         if(ctr_zones) {
           x_ctr_dz = x_ctr_deadz[stick_num];
           y_ctr_dz = y_ctr_deadz[stick_num];
@@ -1004,16 +1004,16 @@ static void recalc_coefficients(int sticks)
         x_ctr_low[stick_num] = x_ctr[stick_num] - x_ctr_dz;
         x_ctr_high[stick_num] = x_ctr[stick_num] + x_ctr_dz;
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "centre x limits for stick %d : %u,%u", stick_num, x_ctr_low[stick_num], x_ctr_high[stick_num]);
+        xsyslogf(log_name, 50, "centre x limits for stick %d : %" PRId32 ",%" PRId32, stick_num, x_ctr_low[stick_num], x_ctr_high[stick_num]);
 #endif
         y_ctr_low[stick_num] = y_ctr[stick_num] - y_ctr_dz;
         y_ctr_high[stick_num] = y_ctr[stick_num] + y_ctr_dz;
 #ifdef DEBUG
-       xsyslogf(log_name, 50, "centre y limits for stick %d : %u,%u", stick_num, y_ctr_low[stick_num], y_ctr_high[stick_num]);
+       xsyslogf(log_name, 50, "centre y limits for stick %d : %" PRId32 ",%" PRId32, stick_num, y_ctr_low[stick_num], y_ctr_high[stick_num]);
 #endif
       }
       {
-        unsigned int x_end_dz, y_end_dz;
+        int32_t x_end_dz, y_end_dz;
         if(end_zones) {
           x_end_dz = x_end_deadz[stick_num];
           y_end_dz = y_end_deadz[stick_num];
@@ -1023,22 +1023,22 @@ static void recalc_coefficients(int sticks)
         }
         safedivide(x_low_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), x_ctr_low[stick_num] - (x_min[stick_num] + x_end_dz));
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "x_low_scaler for stick %d : %u/16384 (approx. %u)", stick_num, x_low_scaler[stick_num], x_low_scaler[stick_num] >> 14);
+        xsyslogf(log_name, 50, "x_low_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, x_low_scaler[stick_num], x_low_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
 
         safedivide(x_high_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), (x_max[stick_num] - x_end_dz) - x_ctr_high[stick_num]);
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "x_high_scaler for stick %d : %u/16384 (approx. %u)", stick_num, x_high_scaler[stick_num], x_high_scaler[stick_num] >> 14);
+        xsyslogf(log_name, 50, "x_high_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, x_high_scaler[stick_num], x_high_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
 
         safedivide(y_low_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), y_ctr_low[stick_num] - (y_min[stick_num] + y_end_dz));
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "y_low_scaler for stick %d : %u/16384 (approx. %u)", stick_num, y_low_scaler[stick_num], y_low_scaler[stick_num] >> 14);
+        xsyslogf(log_name, 50, "y_low_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, y_low_scaler[stick_num], y_low_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
 
         safedivide(y_high_scaler[stick_num], (32768<<SCALER_FRAC_SHIFT), (y_max[stick_num] - y_end_dz) - y_ctr_high[stick_num]);
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "y_high_scaler for stick %d : %u/16384 (approx. %u)", stick_num, y_high_scaler[stick_num], y_high_scaler[stick_num] >> 14);
+        xsyslogf(log_name, 50, "y_high_scaler for stick %d : %" PRId32 "/16384 (approx. %" PRId32 ")", stick_num, y_high_scaler[stick_num], y_high_scaler[stick_num] >> SCALER_FRAC_SHIFT);
 #endif
       }
     } /* endif sticks & (1u << stick_num) */
@@ -1055,8 +1055,8 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
      Input: Bits set in mask indicate axes to read
      Returns: updated mask (bits set indicate axes that timed out)
   */
-  unsigned int start_time;
-  unsigned int new_x[2], new_y[2];
+  int32_t start_time;
+  int32_t new_x[2], new_y[2];
 
 #ifdef DEBUG
   xsyslogf(log_name, 50, "read_joystick mask (axes to read): &%x", mask);
@@ -1074,23 +1074,24 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
   {
     IOC *ioc =  (IOC *)IOC_ADDRESS;
     ioc->timer_0.latch[0] = 0; /* make value appear on latch */
-    start_time = (unsigned int)(ioc->timer_0.low[0] + (ioc->timer_0.high[0] << 8));
+    start_time = ioc->timer_0.low[0] + ((int32_t)ioc->timer_0.high[0] << 8);
   }
 
   _kernel_irqs_on();
   /* (We ASSUME that by doing this we are restoring the entry state) */
 
-  new_x[0] = UINT_MAX; new_y[0] = UINT_MAX; new_x[1] = UINT_MAX; new_y[1] = UINT_MAX;
+  new_x[0] = -1; new_y[0] = -1; new_x[1] = -1; new_y[1] = -1;
 
   /*
      Time how long the axis bits take to drop back to 0
      if they take 1000µs or longer then we give up (not connected?)   */
   {
-    unsigned int prev_time = start_time, wait = 0;
+    int32_t prev_time = start_time, wait = 0;
     unsigned int sticks_lost = 0;
 
     while (mask != 0 && wait < max_wait) {
-      unsigned int interval, new_time, joy;
+      int32_t interval, new_time;
+      unsigned int joy;
 
       _kernel_irqs_off();
 
@@ -1101,7 +1102,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
       {
         IOC *ioc =  (IOC *)IOC_ADDRESS;
         ioc->timer_0.latch[0] = 0; /* make value appear on latch */
-        new_time = (unsigned int)(ioc->timer_0.low[0] + (ioc->timer_0.high[0] << 8));
+        new_time = ioc->timer_0.low[0] + ((int32_t)ioc->timer_0.high[0] << 8);
       }
       _kernel_irqs_on();
       /* (We ASSUME that by doing this we are restoring the entry state) */
@@ -1123,11 +1124,11 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
         if(interval <= tolerance) {
           new_x[0] = wait;
 //#ifdef DEBUG
-//          xsyslogf(log_name, 50, "Got Ax - interval was %d", interval);
+//          xsyslogf(log_name, 50, "Got Ax - interval was %" PRId32, interval);
 //#endif /* DEBUG */
         } else {
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "Lost Ax - interval was %d", interval);
+          xsyslogf(log_name, 50, "Lost Ax - interval was %" PRId32, interval);
 #endif /* DEBUG */
           sticks_lost |= STICK_0;
         }
@@ -1138,11 +1139,11 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
         if(interval <= tolerance) {
           new_y[0] = wait;
 //#ifdef DEBUG
-//          xsyslogf(log_name, 50, "Got Ay - interval was %d", interval);
+//          xsyslogf(log_name, 50, "Got Ay - interval was %" PRId32, interval);
 //#endif /* DEBUG */
         } else {
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "Lost Ay - interval was %d", interval);
+          xsyslogf(log_name, 50, "Lost Ay - interval was %" PRId32, interval);
 #endif /* DEBUG */
           sticks_lost |= STICK_0;
         }
@@ -1153,11 +1154,11 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
         if(interval <= tolerance) {
           new_x[1] = wait;
 //#ifdef DEBUG
-//          xsyslogf(log_name, 50, "Got Bx - interval was %d", interval);
+//          xsyslogf(log_name, 50, "Got Bx - interval was %" PRId32, interval);
 //#endif /* DEBUG */
         } else {
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "Lost Bx - interval was %d", interval);
+          xsyslogf(log_name, 50, "Lost Bx - interval was %" PRId32, interval);
 #endif /* DEBUG */
           sticks_lost |= STICK_1;
         }
@@ -1168,11 +1169,11 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
         if(interval <= tolerance) {
           new_y[1] = wait;
 //#ifdef DEBUG
-//          xsyslogf(log_name, 50, "Got By - interval was %d", interval);
+//          xsyslogf(log_name, 50, "Got By - interval was %" PRId32, interval);
 //#endif /* DEBUG */
         } else {
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "Lost By - interval was %d", interval);
+          xsyslogf(log_name, 50, "Lost By - interval was %" PRId32, interval);
 #endif /* DEBUG */
           sticks_lost |= STICK_1;
         }
@@ -1185,7 +1186,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
   }
 
 #ifdef DEBUG
-  xsyslogf(log_name, 50, "Raw axis times Ax:%d Ay:%d Bx:%d By:%d", new_x[0], new_y[0], new_x[1], new_y[1]);
+  xsyslogf(log_name, 50, "Raw axis times Ax:%" PRId32 " Ay:%" PRId32 " Bx:%" PRId32 " By:%" PRId32, new_x[0], new_y[0], new_x[1], new_y[1]);
   
   /* Those mask bits still set indicate axes that timed out */
   if(mask & PC_JOY_A_X)
@@ -1205,7 +1206,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
     int stick_num;
     for(stick_num = (NUM_STICKS-1); stick_num >= 0; stick_num--) {
 
-      if(new_x[stick_num] != UINT_MAX) {
+      if(new_x[stick_num] != -1) {
 
         /*
            Smooth output value
@@ -1220,7 +1221,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
           x_axis[stick_num] = new_x[stick_num];
       } /* endif new_x[stick_num] == 0 */
 
-      if(new_y[stick_num] != UINT_MAX) {
+      if(new_y[stick_num] != -1) {
 
         /*
            Smooth output value
@@ -1238,7 +1239,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
     } /* next stick_num */
   }
 #ifdef DEBUG
-  xsyslogf(log_name, 50, "Output A: x%u y%u, B: x%u y%u (poss smoothed)", x_axis[0], y_axis[0], x_axis[1], y_axis[1]);
+  xsyslogf(log_name, 50, "Output A: x%" PRId32 " y%" PRId32 ", B: x%" PRId32 " y%" PRId32 " (poss smoothed)", x_axis[0], y_axis[0], x_axis[1], y_axis[1]);
 #endif /* DEBUG */
 
   return mask;
@@ -1246,12 +1247,12 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
 
 /* ----------------------------------------------------------------------- */
 
-static unsigned int smooth_value(unsigned int prev_value, unsigned int new_value, unsigned int stddev)
+static int32_t smooth_value(int32_t prev_value, int32_t new_value, int32_t stddev)
 {
   if((new_value >= (prev_value - stddev)) && (new_value <= (prev_value + stddev))) {
   /* very likely to be jitter - smooth it lots */
 #ifdef DEBUG
-    xsyslogf(log_name, 50, "much smoothing of value %u", new_value);
+    xsyslogf(log_name, 50, "much smoothing of value %" PRId32, new_value);
 #endif /* DEBUG */
     return ((prev_value * 3) + new_value) / 4;
   }
@@ -1259,7 +1260,7 @@ static unsigned int smooth_value(unsigned int prev_value, unsigned int new_value
   if((new_value >= (prev_value - (stddev*2))) && (new_value <= (prev_value + (stddev*2)))) {
     /* near average jitter - smooth it rather less */
 #ifdef DEBUG
-    xsyslogf(log_name, 50, "moderate smoothing of value %u", new_value);
+    xsyslogf(log_name, 50, "moderate smoothing of value %" PRId32, new_value);
 #endif /* DEBUG */
     return (prev_value + new_value) / 2;
   }
@@ -1267,14 +1268,14 @@ static unsigned int smooth_value(unsigned int prev_value, unsigned int new_value
   if((new_value >= (prev_value - (stddev*4))) && (new_value <= (prev_value + (stddev*4)))) {
     /* even further away from average jitter - smooth it slightly */
 #ifdef DEBUG
-    xsyslogf(log_name, 50, "slight smoothing of value %u", new_value);
+    xsyslogf(log_name, 50, "slight smoothing of value %" PRId32, new_value);
 #endif /* DEBUG */
     return ((new_value * 3) + prev_value) / 4;
 
   } else {
     /* miles from jitter bounds - use new value verbatim */
 #ifdef DEBUG
-    xsyslogf(log_name, 50, "taking new value %u verbatim", new_value);
+    xsyslogf(log_name, 50, "taking new value %" PRId32 " verbatim", new_value);
 #endif /* DEBUG */
     return new_value;
   }
@@ -1287,7 +1288,7 @@ static void reinit_joysticks(unsigned int sticks)
   /*
     Find standard deviation from average x,y and limits of jitter
   */
-  unsigned int last_x[NUM_STICKS], last_y[NUM_STICKS];
+  int32_t last_x[NUM_STICKS], last_y[NUM_STICKS];
   bool old_s;
 
 #ifdef DEBUG
@@ -1312,8 +1313,8 @@ static void reinit_joysticks(unsigned int sticks)
   
   {
     unsigned int new_mask = 0;  /* start with presumption that nothing is connected */
-    unsigned int stick_mask, lasttime;
-    int test;
+    unsigned int stick_mask;
+    int32_t test, lasttime;
     
     if(sticks & STICK_0)
       stick_mask = PC_JOY_A_X | PC_JOY_A_Y;
@@ -1334,11 +1335,11 @@ static void reinit_joysticks(unsigned int sticks)
       for(stick_num = (NUM_STICKS-1); stick_num >= 0; stick_num--) {
         if(sticks & (1u << stick_num)) {
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "test %d : x_axis[%d] = %u y_axis[%d] = %u\n", test, stick_num, x_axis[stick_num], stick_num, y_axis[stick_num]);
+          xsyslogf(log_name, 50, "test %d : x_axis[%d] = %" PRId32 " y_axis[%d] = %" PRId32 "\n", test, stick_num, x_axis[stick_num], stick_num, y_axis[stick_num]);
 #endif
 
           if(test < (NUM_TEST_RUNS-1)) {
-            unsigned int x_diff, y_diff;
+            int32_t x_diff, y_diff;
             absdiff(x_diff, last_x[stick_num], x_axis[stick_num]);
             if(x_diff > x_smooth[stick_num])
               x_smooth[stick_num] = x_diff;
@@ -1346,7 +1347,7 @@ static void reinit_joysticks(unsigned int sticks)
             if(y_diff > y_smooth[stick_num])
               y_smooth[stick_num] = y_diff;
 #ifdef DEBUG
-            xsyslogf(log_name, 50, "x diff:%d y_diff:%d\n", x_diff, y_diff);
+            xsyslogf(log_name, 50, "x diff:%" PRId32 " y_diff:%" PRId32 "\n", x_diff, y_diff);
 #endif
 
           }
@@ -1360,7 +1361,7 @@ static void reinit_joysticks(unsigned int sticks)
         /*
            We enforce a little delay here (1cs), in order to allow the capacitors to 'cool down' (otherwise calibration conditions are not comparable to actual operation)
         */
-        unsigned int newtime;
+        int32_t newtime;
         _kernel_oserror *e;
         do {
           /* Read number of centi-seconds since last hard reset */
@@ -1396,7 +1397,7 @@ static void reinit_joysticks(unsigned int sticks)
         x_max[stick] = x_ctr[stick]*2;
         y_max[stick] = y_ctr[stick]*2;
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "Guessing x,y limits for stick %d : %u,%u", stick, x_max[stick], y_max[stick]);
+        xsyslogf(log_name, 50, "Guessing x,y limits for stick %d : %" PRId32 ",%" PRId32, stick, x_max[stick], y_max[stick]);
 #endif
       } /* endif sticks & (1u << stick_num) */
     }
@@ -1415,14 +1416,14 @@ static void reinit_joysticks(unsigned int sticks)
 
 /* ----------------------------------------------------------------------- */
 
-static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigned int *y_array, unsigned int *x_jitdist, unsigned int *y_jitdist, int bias)
+static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_array, int32_t *x_jitdist, int32_t *y_jitdist, int32_t bias)
 {
   /*
     Returns the average stick position and the maximum recorded deviation from this value
   */
-  unsigned int x_tot[NUM_STICKS], y_tot[NUM_STICKS];
-  unsigned int x_jit_max[NUM_STICKS], x_jit_min[NUM_STICKS], y_jit_max[NUM_STICKS], y_jit_min[NUM_STICKS];
-  unsigned int last_x[NUM_STICKS], last_y[NUM_STICKS];
+  int32_t x_tot[NUM_STICKS], y_tot[NUM_STICKS];
+  int32_t x_jit_max[NUM_STICKS], x_jit_min[NUM_STICKS], y_jit_max[NUM_STICKS], y_jit_min[NUM_STICKS];
+  int32_t last_x[NUM_STICKS], last_y[NUM_STICKS];
 
 #ifdef DEBUG
   _swix(Hourglass_On, 0);
@@ -1437,7 +1438,7 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
         y_jit_min[stick_num] = MAX_AXIS_WAIT_TIME; /* start implausibly high */
         x_jit_max[stick_num] = 0;
         y_jit_max[stick_num] = 0; /* start implausibly low */
-        last_x[stick_num] = UINT_MAX;
+        last_x[stick_num] = -1;
       }
     }
   }
@@ -1446,8 +1447,8 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
   xsyslog_logmessage(log_name, "Waiting for sticks to settle...", 50);
 #endif
   {
-    int test;
-    unsigned int lasttime, read_axes;
+    int32_t test, lasttime;
+    unsigned int read_axes;
     int go_go_go = 8; /* max loops to wait for all sticks to settle */
 
     if(sticks & STICK_0)
@@ -1484,7 +1485,7 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
             x_tot[stick_num] += x_axis[stick_num];
             y_tot[stick_num] += y_axis[stick_num];
 #ifdef DEBUG
-            xsyslogf(log_name, 50, "test %d : x_axis[%d] = %u y_axis[%d] = %u\n", test, stick_num, x_axis[stick_num], stick_num, y_axis[stick_num]);
+            xsyslogf(log_name, 50, "test %d : x_axis[%d] = %" PRId32 " y_axis[%d] = %" PRId32 "\n", test, stick_num, x_axis[stick_num], stick_num, y_axis[stick_num]);
 #endif
             /* update maxima and minima */
             update_min_max(x_axis, x_jit_min, x_jit_max, stick_num);
@@ -1492,8 +1493,8 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
 
           } else {
             /* We wait for stick to settle in new position (polling may have been disabled, so early values may be invalid) */
-            if(last_x[stick_num] != UINT_MAX && !(lost & (1u << stick_num))) {
-              unsigned int diff;
+            if(last_x[stick_num] != -1 && !(lost & (1u << stick_num))) {
+              int32_t diff;
               absdiff(diff, last_x[stick_num], x_axis[stick_num]);
               if(diff <= x_smooth[stick_num]*2) {
                 absdiff(diff, last_y[stick_num], y_axis[stick_num]);
@@ -1535,7 +1536,7 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
         /*
            We enforce a little delay here (1cs), in order to allow the capacitors to 'cool down' (otherwise calibration conditions are not comparible to actual operation)
         */
-        unsigned int newtime;
+        int32_t newtime;
         _kernel_oserror *e;
         do {
           /* Read number of centi-seconds since last hard reset */
@@ -1554,38 +1555,38 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
         x_array[stick_num] = x_tot[stick_num] / NUM_TEST_RUNS;
         y_array[stick_num] = y_tot[stick_num] / NUM_TEST_RUNS;
 #ifdef DEBUG
-        xsyslogf(log_name, 50, "average x[%d]:%d average y[%d]:%d\n",stick_num, x_array[stick_num], stick_num, y_array[stick_num]);
+        xsyslogf(log_name, 50, "average x[%d]:%" PRId32 " average y[%d]:%" PRId32 "\n",stick_num, x_array[stick_num], stick_num, y_array[stick_num]);
 #endif
         {
           /*
              Deadzone should cover all recorded values,
              whilst being symmetric around the average centre value
            */
-          int min,max;
+          int32_t min,max;
           min = x_array[stick_num] - x_jit_min[stick_num];
           max = x_jit_max[stick_num] - x_array[stick_num];
           if((min > max || (bias & X_BIAS_MIN)) && !(bias & X_BIAS_MAX)) {
             /* max > min or biased towards min, and not biased towards max */
-            x_jitdist[stick_num] = (unsigned int)min;
+            x_jitdist[stick_num] = min;
           } else {
             /* biased towards max, or max >= min and not biased towards min */
-            x_jitdist[stick_num] = (unsigned int)max;
+            x_jitdist[stick_num] = max;
           }
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "x deadzone for stick %d : ±%u (min = %u, max = %u)", stick_num, x_jitdist[stick_num], x_jit_min[stick_num], x_jit_max[stick_num]);
+          xsyslogf(log_name, 50, "x deadzone for stick %d : ±%" PRId32 " (min = %" PRId32 ", max = %" PRId32 ")", stick_num, x_jitdist[stick_num], x_jit_min[stick_num], x_jit_max[stick_num]);
 #endif
   
           min = y_array[stick_num] - y_jit_min[stick_num];
           max = y_jit_max[stick_num] - y_array[stick_num];
           if((min > max || (bias & Y_BIAS_MIN)) && !(bias & Y_BIAS_MAX)) {
             /* max > min or biased towards min, and not biased towards max */
-            y_jitdist[stick_num] = (unsigned int)min;
+            y_jitdist[stick_num] = min;
           } else {
             /* biased towards max, or max >= min and not biased towards min */
-            y_jitdist[stick_num] = (unsigned int)max;
+            y_jitdist[stick_num] = max;
           }
 #ifdef DEBUG
-          xsyslogf(log_name, 50, "y deadzone for stick %d : ±%u (min = %u, max = %u)", stick_num, y_jitdist[stick_num], y_jit_min[stick_num], y_jit_max[stick_num]);
+          xsyslogf(log_name, 50, "y deadzone for stick %d : ±%" PRId32 " (min = %" PRId32 ", max = %" PRId32 ")", stick_num, y_jitdist[stick_num], y_jit_min[stick_num], y_jit_max[stick_num]);
 #endif
         }
       }
@@ -1599,17 +1600,17 @@ static void get_av_stick_pos(unsigned int sticks, unsigned int *x_array, unsigne
 
 /* ----------------------------------------------------------------------- */
 
-static int eval_expr(char *buffer)
+static int32_t eval_expr(char *buffer)
 {
   if(buffer[0] == 0)
-    return buffer[1] | (buffer[2]<<8) | (buffer[3]<<16) | (buffer[4]<<24);
+    return buffer[1] | ((int32_t)buffer[2]<<8) | ((int32_t)buffer[3]<<16) | ((int32_t)buffer[4]<<24);
   else
     return 0;
 }
 
 /* ----------------------------------------------------------------------- */
 
-static void update_min_max(unsigned int *axis, unsigned int *jit_min, unsigned int *jit_max, int stick_num)
+static void update_min_max(int32_t *axis, int32_t *jit_min, int32_t *jit_max, int stick_num)
 {
   if(axis[stick_num] < jit_min[stick_num])
     jit_min[stick_num] = axis[stick_num];
