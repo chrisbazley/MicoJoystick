@@ -262,7 +262,7 @@ static unsigned int read_joystick(unsigned int mask, unsigned int *lost);
 static void recalc_coefficients(unsigned int sticks);
 static int32_t smooth_value(int32_t prev_value, int32_t new_value, int32_t stddev);
 static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_array, int32_t *x_jitdist, int32_t *y_jitdist, int32_t bias);
-static int32_t eval_expr(char *buffer);
+static int32_t eval_expr(unsigned char *buffer);
 static void reinit_joysticks(unsigned int sticks);
 static void update_min_max(int32_t *axis, int32_t *jit_min, int32_t *jit_max, int32_t stick_num);
 
@@ -630,7 +630,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
         /*
            Can have no more than 9 args - the worst case includes all 3 evaluated elements (6 args) and 3 of the possible switches (3 args). Allow one memory word for each element, plus sufficient buffer space for evaluated element blocks.
          */
-        char *args_buf[(6*4) + (3*8)];
+        unsigned char *args_buf[(6*4) + (3*8)];
         {
           _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), config_syntax, arg_string, args_buf, sizeof(args_buf));
           if(e != NULL)
@@ -730,7 +730,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
         /*
            Can have no more than 14 args - the worst case is 6 evaluated elements with identifiers (12 args), 1 EE without id (1 arg) and 1 string element (1 arg). Allow one memory word for each element, plus sufficient buffer space for evaluated element blocks, plus a bit extra for the string.
          */
-        char *args_buf[(8*4) + (7*8) + 4];
+        unsigned char *args_buf[(8*4) + (7*8) + 4];
         int joynum;
         bool change_x;
         {
@@ -811,7 +811,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
         /*
            Can have no more than 1 arg, being 1 evaluated element without identifier. Allow one memory word for this element, plus sufficient buffer space for the evaluated element block.
         */
-        char *args_buf[(1*4) + 8];
+        unsigned char *args_buf[(1*4) + 8];
         {
           _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), reinit_syntax, arg_string, args_buf, sizeof(args_buf));
           if(e != NULL)
@@ -1600,7 +1600,7 @@ static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_a
 
 /* ----------------------------------------------------------------------- */
 
-static int32_t eval_expr(char *buffer)
+static int32_t eval_expr(unsigned char *buffer)
 {
   if(buffer[0] == 0) {
     /* Assemble a 32 bit integer from 4 bytes, assuming
