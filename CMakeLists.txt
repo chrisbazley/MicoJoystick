@@ -36,9 +36,4 @@ target_link_libraries(MicoJoystick PRIVATE
 
 target_compile_definitions(MicoJoystick PUBLIC
     $<$<CONFIG:Debug>:DEBUG_OUTPUT>
-    $<$<CONFIG:Release>:NDEBUG>
-)
-
-target_compile_options(MicoJoystick PUBLIC
-    $<$<CONFIG:Release>:-O3>
 )
