@@ -2,7 +2,7 @@
 
 
 # Toolflags:
-CCflags = -c -depend !Depend -IC: -throwback -zM -ff -zps1 -Ospace -apcs 3/26/fpe2/swst/fp/fpr 
+CCflags = -c -depend !Depend -IC: -throwback -zM -ff -zps1 -Ospace -DACORN_C -apcs 3/26/fpe2/swst/fp/fpr 
 C++flags = -c -depend !Depend -IC: -throwback
 Linkflags = -rmf -c++ -o $@ 
 ObjAsmflags = -throwback -NoCache -depend !Depend
