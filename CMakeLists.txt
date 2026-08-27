@@ -49,7 +49,11 @@ else()
     add_compile_options(-Wall -Wextra -Wsign-compare -pedantic)
 endif()
 
-if(CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
+if(ENABLE_CLANG_TIDY)
+    if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
+        message(FATAL_ERROR "ENABLE_CLANG_TIDY requires Clang")
+    endif()
+
     find_program(CLANG_TIDY_EXE
         NAMES clang-tidy
         HINTS "/opt/homebrew/opt/llvm/bin"
@@ -83,7 +87,7 @@ if(SYSTEM_NAME_UPPER STREQUAL "RISCOS")
   add_executable(MicoJoystick ${SOURCE_FILES} ${HEADER_FILES})
 else()
   # Other platforms: Compile only (no linking) to catch errors
-  add_library(MicoJoystick ${SOURCE_FILES} ${HEADER_FILES})
+  add_library(MicoJoystick OBJECT ${SOURCE_FILES} ${HEADER_FILES})
 endif()
 
 target_link_libraries(MicoJoystick PRIVATE
@@ -98,6 +102,6 @@ if(USE_FORTIFY)
   target_link_libraries(MicoJoystick PRIVATE Fortify)
 endif()
 
-target_compile_definitions(MicoJoystick PUBLIC
+target_compile_definitions(MicoJoystick PRIVATE
     $<$<CONFIG:Debug>:DEBUG_OUTPUT>
 )
