@@ -9,6 +9,10 @@
 #include "kernel.h"
 #endif
 
+#if !defined(USE_OPTIONAL) && !defined(_Optional)
+#define _Optional
+#endif
+
 #define CMHG_VERSION 542
 
 #define Module_Title                     "Joystick"
@@ -35,7 +39,7 @@
  * for your module veneers via an intermediary such as SWI OS_CallEvery
  * (use _swix() to issue the SWI call).
  */
-_kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void *pw);
+_Optional _kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void *pw);
 
 
 /*
@@ -48,7 +52,7 @@ _kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void 
  * fatal, podule and pw are the values of R10, R11 and R12 (respectively)
  * on entry to the finalisation code.
  */
-_kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw);
+_Optional _kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw);
 
 
 /*
@@ -91,7 +95,7 @@ _kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw);
 #define CMD_JoystickReInit              2
 #define CMD_JoystickInfo                3
 
-_kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no, void *pw);
+_Optional _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no, void *pw);
 
 
 /*
@@ -121,7 +125,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
 
 #define error_BAD_SWI ((_kernel_oserror *) -1)
 
-_kernel_oserror *MicoJoy_swihandler(int swi_offset, _kernel_swi_regs *r, void *pw);
+_Optional _kernel_oserror *MicoJoy_swihandler(int swi_offset, _kernel_swi_regs *r, void *pw);
 
 
 /*
@@ -156,8 +160,8 @@ extern void pollstick_veneer(void);
  * pw is the private word pointer ('R12') value with which the
  * entry veneer is called.
  */
-_kernel_oserror *doread_handler(_kernel_swi_regs *r, void *pw);
-_kernel_oserror *stoppoll_handler(_kernel_swi_regs *r, void *pw);
-_kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw);
+_Optional _kernel_oserror *doread_handler(_kernel_swi_regs *r, void *pw);
+_Optional _kernel_oserror *stoppoll_handler(_kernel_swi_regs *r, void *pw);
+_Optional _kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw);
 
 #endif

@@ -28,11 +28,21 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+#ifdef FORTIFY
+#include "fortify.h"
+#endif
+
 /* RISC OS headers */
 #include "kernel.h"
 #include "swis.h"
 #ifdef DEBUG
 #include "syslog.h"
+#endif
+
+#ifdef USE_OPTIONAL
+#include "Optional.h"
+#else
+#define _Optional
 #endif
 
 /* CMHG header */
@@ -258,7 +268,7 @@ static const char reinit_syntax[] = "/E";
 #define Y_BIAS_MIN (1u << 2)
 #define Y_BIAS_MAX (1u << 3) /* directional bias for get_av_stick_pos() */
 
-static unsigned int read_joystick(unsigned int mask, unsigned int *lost);
+static unsigned int read_joystick(unsigned int mask, _Optional unsigned int *lost);
 static void recalc_coefficients(unsigned int sticks);
 static int32_t smooth_value(int32_t prev_value, int32_t new_value, int32_t stddev);
 static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_array, int32_t *x_jitdist, int32_t *y_jitdist, int32_t bias);
@@ -269,7 +279,7 @@ static void update_min_max(int32_t *axis, int32_t *jit_min, int32_t *jit_max, in
 /* ----------------------------------------------------------------------- */
 /*                         Public functions                                */
 
-_kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void *pw)
+_Optional _kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void *pw)
 {
   char addr_buffer[10];
   
@@ -305,11 +315,11 @@ _kernel_oserror *MicoJoy_initialise(const char *cmd_tail, int podule_base, void 
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *private_word)
+_Optional _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *private_word)
 {
   if((swi_no == (Joystick_CalibrateTopRight-Joystick_00) || swi_no == (Joystick_CalibrateBottomLeft-Joystick_00)) && calib_status == CALIB_NONE && polling_stick) {
      /* cease polling stick for duration of calibration (just interferes) */
-    _kernel_oserror *e;
+    _Optional _kernel_oserror *e;
 #ifdef DEBUG
     xsyslog_logmessage(log_name, "Removing CallEvery to pollstick_veneer (for calibration)", 1);
 #endif
@@ -334,7 +344,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
       swi_in_last_min = true;
       if(!polling_stick) {
         /* Restart polling after a period of inactivity */
-        _kernel_oserror *e;
+        _Optional _kernel_oserror *e;
         int stick_num;
 #ifdef DEBUG
         xsyslog_logmessage(log_name, "Joystick_Read after inactivity - registering CallEvery to pollstick_veneer", 1);
@@ -599,7 +609,7 @@ _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, void *priva
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no, void *pw)
+_Optional _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no, void *pw)
 {
   UNUSED(pw);
   
@@ -632,7 +642,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
          */
         unsigned char *args_buf[(6*4) + (3*8)];
         {
-          _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), config_syntax, arg_string, args_buf, sizeof(args_buf));
+          _Optional _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), config_syntax, arg_string, args_buf, sizeof(args_buf));
           if(e != NULL)
             return e;
         }
@@ -690,7 +700,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
           if(new_freq != poll_freq) {
             if(polling_stick) {
               /* First stop polling at old frequency */
-              _kernel_oserror *e = _swix(OS_RemoveTickerEvent, _INR(0,1), pollstick_veneer, pw);
+              _Optional _kernel_oserror *e = _swix(OS_RemoveTickerEvent, _INR(0,1), pollstick_veneer, pw);
               if(e != NULL)
                 return e;
            
@@ -734,7 +744,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
         int joynum;
         bool change_x;
         {
-          _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), calib_syntax, arg_string, args_buf, sizeof(args_buf));
+          _Optional _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), calib_syntax, arg_string, args_buf, sizeof(args_buf));
           if(e != NULL)
             return e;
         }
@@ -813,7 +823,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
         */
         unsigned char *args_buf[(1*4) + 8];
         {
-          _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), reinit_syntax, arg_string, args_buf, sizeof(args_buf));
+          _Optional _kernel_oserror *e = _swix(OS_ReadArgs, _INR(0,3), reinit_syntax, arg_string, args_buf, sizeof(args_buf));
           if(e != NULL)
             return e;
         }
@@ -832,7 +842,7 @@ _kernel_oserror *MicoJoy_cmdhandler(const char *arg_string, int argc, int cmd_no
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw)
+_Optional _kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw)
 {
   /* Called every 10 cs (100,000µs) */
   UNUSED(r);
@@ -842,7 +852,7 @@ _kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw)
 #endif
   if(callback_free) {
     /* Add a transient callback (reading the joystick here would take too long with interrupts disabled */
-    _kernel_oserror *e;
+    _Optional _kernel_oserror *e;
 #ifdef DEBUG
     xsyslog_logmessage(log_name, "Adding transient CallBack to doread_veneer", 1);
 #endif
@@ -868,7 +878,7 @@ _kernel_oserror *pollstick_handler(_kernel_swi_regs *r, void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *stoppoll_handler(_kernel_swi_regs *r, void *pw)
+_Optional _kernel_oserror *stoppoll_handler(_kernel_swi_regs *r, void *pw)
 {
   /* Called every 10 seconds, to disable polling if no calls to Joystick SWIs */
   UNUSED(r);
@@ -889,7 +899,7 @@ _kernel_oserror *stoppoll_handler(_kernel_swi_regs *r, void *pw)
 #endif
     if(polling_stick) {
       /* Joystick_Read not called recently - cease polling */
-     _kernel_oserror *e;
+      _Optional _kernel_oserror *e;
 #ifdef DEBUG
       xsyslog_logmessage(log_name, "Removing CallEvery to pollstick_veneer", 1);
 #endif
@@ -911,7 +921,7 @@ _kernel_oserror *stoppoll_handler(_kernel_swi_regs *r, void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *doread_handler(_kernel_swi_regs *r, void *pw)
+_Optional _kernel_oserror *doread_handler(_kernel_swi_regs *r, void *pw)
 {
   /* Reading the joystick would take too long in an interrupt - this way we can take as long as we want, and call non-re-entrant SWIs too */
   UNUSED(pw);
@@ -932,7 +942,7 @@ _kernel_oserror *doread_handler(_kernel_swi_regs *r, void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw)
+_Optional _kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw)
 {
   UNUSED(fatal);
   UNUSED(podule);
@@ -943,7 +953,7 @@ _kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw)
 
   if(polling_stick) {
     /* Remove joystick polling routine */
-    _kernel_oserror *e;
+    _Optional _kernel_oserror *e;
 #ifdef DEBUG
     xsyslog_logmessage(log_name, "Removing CallEvery to pollstick_veneer before exit", 1);
 #endif
@@ -957,7 +967,7 @@ _kernel_oserror *MicoJoy_finalise(int fatal, int podule, void *pw)
     polling_stick = false;
   }
   if(callback_pending) {
-    _kernel_oserror *e;
+    _Optional _kernel_oserror *e;
 #ifdef DEBUG
     xsyslog_logmessage(log_name, "Removing outstanding CallBack to doread_veneer before exit", 1);
 #endif
@@ -1047,7 +1057,7 @@ static void recalc_coefficients(unsigned int sticks)
 
 /* ----------------------------------------------------------------------- */
 
-static unsigned int read_joystick(unsigned int mask, unsigned int *lost)
+static unsigned int read_joystick(unsigned int mask, _Optional unsigned int *lost)
 {
   /*
      Read current position of joysticks
@@ -1362,7 +1372,7 @@ static void reinit_joysticks(unsigned int sticks)
            We enforce a little delay here (1cs), in order to allow the capacitors to 'cool down' (otherwise calibration conditions are not comparable to actual operation)
         */
         int32_t newtime;
-        _kernel_oserror *e;
+        _Optional _kernel_oserror *e;
         do {
           /* Read number of centi-seconds since last hard reset */
           e = _swix(OS_ReadMonotonicTime, _OUT(0), &newtime);
@@ -1537,7 +1547,7 @@ static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_a
            We enforce a little delay here (1cs), in order to allow the capacitors to 'cool down' (otherwise calibration conditions are not comparible to actual operation)
         */
         int32_t newtime;
-        _kernel_oserror *e;
+        _Optional _kernel_oserror *e;
         do {
           /* Read number of centi-seconds since last hard reset */
           e = _swix(OS_ReadMonotonicTime, _OUT(0), &newtime);

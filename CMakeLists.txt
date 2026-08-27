@@ -12,6 +12,9 @@ FetchContent_Declare(OptionalAcornC GIT_REPOSITORY https://github.com/chrisbazle
 FetchContent_MakeAvailable(OptionalAcornC)
 
 if(USE_OPTIONAL)
+    FetchContent_Declare(CBUtil GIT_REPOSITORY https://github.com/chrisbazley/CBUtilLib.git GIT_TAG main)
+    FetchContent_MakeAvailable(CBUtil)
+
     if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
         message(FATAL_ERROR
             "USE_OPTIONAL requires Christopher Bazley's Clang fork")
@@ -86,6 +89,14 @@ endif()
 target_link_libraries(MicoJoystick PRIVATE
     OptionalAcornC
 )
+
+if(USE_OPTIONAL)
+  target_link_libraries(MicoJoystick PRIVATE CBUtil)
+endif()
+
+if(USE_FORTIFY)
+  target_link_libraries(MicoJoystick PRIVATE Fortify)
+endif()
 
 target_compile_definitions(MicoJoystick PUBLIC
     $<$<CONFIG:Debug>:DEBUG_OUTPUT>
