@@ -425,11 +425,9 @@ _Optional _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, v
                 r->r[0] = (y & 0xff) | ((x & 0xff)<<8);
               }
               { /* Read fire buttons */
-                uint8_t joy;
-                intptr_t buttons;
 
-                joy = *game_port_address; /* read joystick status bits */
-                buttons = 0;
+                uint8_t joy = *game_port_address; /* read joystick status bits */
+                intptr_t buttons = 0;
                 if(stick_num == 0) {
                   /* return joystick A buttons */
                   if(!(joy & PC_JOY_A_B1))
@@ -509,11 +507,9 @@ _Optional _kernel_oserror *MicoJoy_swihandler(int swi_no, _kernel_swi_regs *r, v
                 r->r[0] = (y & 0xffff) | (x << 16);
               }
               { /* Read fire buttons */
-                uint8_t joy;
-                intptr_t buttons;
 
-                joy = *game_port_address; /* read joystick status bits */
-                buttons = 0;
+                uint8_t joy = *game_port_address; /* read joystick status bits */
+                intptr_t buttons = 0;
                 if(stick_num == 0) {
                   /* return joystick A buttons */
                   if(!(joy & PC_JOY_A_B1))
@@ -1100,13 +1096,12 @@ static unsigned int read_joystick(unsigned int mask, _Optional unsigned int *los
     unsigned int sticks_lost = 0;
 
     while (mask != 0 && wait < max_wait) {
-      int32_t interval, new_time;
-      unsigned int joy;
+      int32_t new_time;
 
       _kernel_irqs_off();
 
       /* Read gameport status byte */
-      joy = ~(*game_port_address); /* now bits set indicate axes finished */
+      unsigned int joy = ~(*game_port_address); /* now bits set indicate axes finished */
 
       /* Read IOC Timer 0 */
       {
@@ -1125,7 +1120,7 @@ static unsigned int read_joystick(unsigned int mask, _Optional unsigned int *los
 
 
       /* Check for interrupt or something disrupting loop */
-      interval = prev_time - new_time;
+      int32_t interval = prev_time - new_time;
       prev_time = new_time;
 
       joy &= mask; /* mask out those bits we aren't interested in */
@@ -1572,9 +1567,8 @@ static void get_av_stick_pos(unsigned int sticks, int32_t *x_array, int32_t *y_a
              Deadzone should cover all recorded values,
              whilst being symmetric around the average centre value
            */
-          int32_t min,max;
-          min = x_array[stick_num] - x_jit_min[stick_num];
-          max = x_jit_max[stick_num] - x_array[stick_num];
+          int32_t min = x_array[stick_num] - x_jit_min[stick_num];
+          int32_t max = x_jit_max[stick_num] - x_array[stick_num];
           if((min > max || (bias & X_BIAS_MIN)) && !(bias & X_BIAS_MAX)) {
             /* max > min or biased towards min, and not biased towards max */
             x_jitdist[stick_num] = min;
