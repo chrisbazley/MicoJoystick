@@ -1302,8 +1302,8 @@ static void reinit_joysticks(unsigned int sticks)
     int stick_num;
     for(stick_num = (NUM_STICKS-1); stick_num >= 0; stick_num--) {
       if(sticks & (1u << stick_num)) {
-        x_axis[stick_num] = 800;
-        y_axis[stick_num] = 800; /* in case axes time out */
+        last_x[stick_num] = x_axis[stick_num] = 800;
+        last_y[stick_num] = y_axis[stick_num] = 800; /* in case axes time out */
 
         x_smooth[stick_num] = 0;
         y_smooth[stick_num] = 0;
